@@ -34,19 +34,77 @@ def start(bot, update):
                 user_name=update.message.from_user.first_name,
                 bot_name=bot.name))
 
-def overwatch(bot, update, args):
-    r = requests.get('{overwatchAPIDomain}')
+# Format prestige rating as stars after their current level
+def prestigeFormatting(prestigeLevel, currentLevel):
+    prestigeSign = str(currentLevel)
+    if prestigeLevel > 0:
+        for i in range(prestigeLevel):
+            prestigeSign += " *"
+        return prestigeSign
+    else:
+        return prestigeSign
 
-    if r.stats_code == 200:
+def overwatch(bot, update, args):
+    if determineWhiteListedUsers(update.message.chat_id) is False:
         bot.send_message(chat_id=update.message.chat_id,
-            text="I should be returning you something")
+                text="I'm sorry, you are not white-listed for this service")
+        return
+
+    for battletag in args:
+        logger.info('checking on the following battletag %s', battletag)
+        """
+        The API can only take in '-' as the delimiter instead of the pound-sign
+        that is often used 
+        """
+        battletagParsed = battletag.replace('#', '-')
+        requestUrl = "{0}/api/v3/u/{1}/stats".format(overwatchAPIDomain, battletagParsed)
+        userAgent = "{0}/0.1".format(bot.name)
+        headers = { 'user-agent': userAgent }
+
+        logger.info('the headers: %s', headers)
+        logger.info('requestUrl: %s', requestUrl)
+
+        r = requests.get(requestUrl, headers=headers)
+
+        logger.info('the response: %s', r)
+        logger.info('status code: %s', r.status_code)
+        logger.info('text: %s', r.text)
+        logger.info('encoding: %s', r.encoding)
+
+        bot.send_message(chat_id=update.message.chat_id,
+                text="Ok, looking up the information, one moment...")
+
+        if r.status_code == 200:
+            logger.info('response was good')
+            response = r.json()
+            quickPlayGameStats = response['us']['stats']['quickplay']['game_stats']
+            quickPlayOverallStats = response['us']['stats']['quickplay']['overall_stats']
+            logger.info('quickPlayOverallStats: %s', quickPlayOverallStats)
+
+            currentLevel = prestigeFormatting(quickPlayOverallStats['prestige'], quickPlayOverallStats['level'])
+
+            battletagStats = "Current Quickplay overall stats for {battletag}\n"
+            battletagStats += "Level: {currentLevel}\n"
+            battletagStats += "Number of Wins: {numOfWins}\n"
+            battletagStats += "Competitive Rank: {compRank}\n"
+            battletagStats += "Total Hours Played: {totalHours}"
+            bot.send_message(chat_id=update.message.chat_id,
+                text=battletagStats.format(
+                    battletag=battletag,
+                    currentLevel=currentLevel,
+                    numOfWins=quickPlayOverallStats['wins'],
+                    compRank=quickPlayOverallStats['comprank'],
+                    totalHours=quickPlayGameStats['time_played']))
+        else:
+            bot.send_message(chat_id=update.message.chat_id,
+                    text='Hmmm, something is wrong with the API request. Sorry! I am unable to return back stats')
 
 def main():
     updater = Updater(sys.argv[1])
     dispatch = updater.dispatcher
     dispatch.add_handler(CommandHandler('start', start))
     dispatch.add_handler(CommandHandler('info', start))
-    # dispatch.add_handler(CommandHandler('overwatch', overwatch))
+    dispatch.add_handler(CommandHandler('overwatch', overwatch, pass_args=True))
 
     # Begin the polling process
     updater.start_polling()
