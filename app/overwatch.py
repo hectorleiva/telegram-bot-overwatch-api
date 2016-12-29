@@ -50,8 +50,10 @@ def overwatch(bot, update, args):
                 text="I'm sorry, you are not white-listed for this service")
         return
 
+    bot.send_message(chat_id=update.message.chat_id,
+            text="Ok, looking up the information, one moment...")
+
     for battletag in args:
-        logger.info('checking on the following battletag %s', battletag)
         """
         The API can only take in '-' as the delimiter instead of the pound-sign
         that is often used 
@@ -61,7 +63,6 @@ def overwatch(bot, update, args):
         userAgent = "{0}/0.1".format(bot.name)
         headers = { 'user-agent': userAgent }
 
-        logger.info('the headers: %s', headers)
         logger.info('requestUrl: %s', requestUrl)
 
         r = requests.get(requestUrl, headers=headers)
@@ -69,10 +70,6 @@ def overwatch(bot, update, args):
         logger.info('the response: %s', r)
         logger.info('status code: %s', r.status_code)
         logger.info('text: %s', r.text)
-        logger.info('encoding: %s', r.encoding)
-
-        bot.send_message(chat_id=update.message.chat_id,
-                text="Ok, looking up the information, one moment...")
 
         if r.status_code == 200:
             logger.info('response was good')
