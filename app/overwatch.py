@@ -4,7 +4,6 @@
 # Ask your bot for your latest Overwatch stats against SunDwarf's
 # Overwatch API.
 from telegram.ext import Updater, CommandHandler, Job
-from whitelisting import *
 
 import sys
 import requests
@@ -14,7 +13,6 @@ overwatchAPIDomain = 'https://owapi.net'
 
 # 0) The script itself
 # 1) The Token
-# 2) The whitelisted id for testing
 cmdargs = str(sys.argv)
 
 # Enable logging
@@ -45,11 +43,6 @@ def prestigeFormatting(prestigeLevel, currentLevel):
         return prestigeSign
 
 def overwatch(bot, update, args):
-    if determineWhiteListedUsers(update.message.chat_id) is False:
-        bot.send_message(chat_id=update.message.chat_id,
-                text="I'm sorry, you are not white-listed for this service")
-        return
-
     bot.send_message(chat_id=update.message.chat_id,
             text="Ok, looking up the information, one moment...")
 
